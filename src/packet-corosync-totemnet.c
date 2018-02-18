@@ -422,6 +422,23 @@ dissect_corosynec_totemnet_with_decryption(tvbuff_t *tvb,
 }
 
 static int
+detect_v2_crypto_header(tvbuff_t *tvb)
+{
+    guint32 v2_crypto_header;
+
+    if (tvb_length(tvb) < 4) {
+	return 0;
+    }
+    v2_crypto_header = tvb_get_ntohl(tvb, 0);
+    if (v2_crypto_header == 0xfefe0000 /* 2_3 fake crypto header */
+        || v2_crypto_header == 0xffff0000) { /* 2_2 */
+        return 1;
+    }
+    /* needs more work to support v2.1 and v2.2 */
+    return 0;
+}
+
+static int
 dissect_corosynec_totemnet(tvbuff_t *tvb,
                            packet_info *pinfo, proto_tree *parent_tree,
 			   void *data)
@@ -477,6 +494,16 @@ dissect_corosynec_totemnet(tvbuff_t *tvb,
 	    }
 	}
     }
+
+  if (detect_v2_crypto_header(tvb)) {
+      tvbuff_t *next_tvb;
+      int len;
+      /* just skip v2 crypto header for now; needs to be improved
+         to display v2 crypto header and to support v2 encryption */
+      next_tvb = tvb_new_subset_remaining(tvb, 4);
+      len = dissect_corosync_totemsrp(next_tvb, pinfo, parent_tree);
+      return (len > 0) ? 4 + len : 0;
+  }
   return dissect_corosync_totemsrp(tvb, pinfo, parent_tree);
 }
 
