@@ -93,8 +93,7 @@ static gint ett_corosync_totempg_message_fragments  = -1;
 /* desegmentation of message */
 static gboolean    corosync_totempg_message_desegment = TRUE;
 
-static GHashTable *corosync_totempg_message_segment_table = NULL;
-static GHashTable *corosync_totempg_message_reassembled_table = NULL;
+static reassembly_table corosync_totempg_message_reassembly_table;
 
 static const fragment_items corosync_totempg_message_frag_items = {
 	/* Fragment subtrees */
@@ -316,10 +315,10 @@ reassemble_and_dissect_corosync_totempg_payload(tvbuff_t *tvb, packet_info *pinf
 	  tvbuff_t       *next_tvb;
 
 
-	  frag_msg = fragment_add_seq_check(tvb, offset, pinfo, 
+	  frag_msg = fragment_add_seq_check(&corosync_totempg_message_reassembly_table,
+					    tvb, offset, pinfo,
 					    corosync_totemsrp_nodeid(pinfo),
-					    corosync_totempg_message_segment_table,
-					    corosync_totempg_message_reassembled_table,
+					    NULL,
 					    continuation,
 					    msg_lens[0], 
 					    (fragmented > 0)? 1: 0);
@@ -383,10 +382,10 @@ reassemble_and_dissect_corosync_totempg_payload(tvbuff_t *tvb, packet_info *pinf
 	  fragment_data  *frag_msg;
 	  tvbuff_t       *next_tvb;
 
-	  frag_msg = fragment_add_seq_check(tvb, offset, pinfo, 
+	  frag_msg = fragment_add_seq_check(&corosync_totempg_message_reassembly_table,
+                                            tvb, offset, pinfo,
 					    corosync_totemsrp_nodeid(pinfo),
-					    corosync_totempg_message_segment_table,
-					    corosync_totempg_message_reassembled_table,
+                                            NULL,
 					    continuation,
 					    msg_lens[z], 1);
 
@@ -555,8 +554,8 @@ dissect_corosync_totempg_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tre
 
 static void corosync_totempg_message_reassemble_init (void)
 {
-  /* fragment_table_init    (&corosync_totempg_message_segment_table); */
-  /* reassembled_table_init (&corosync_totempg_message_reassembled_table); */
+  reassembly_table_init(&corosync_totempg_message_reassembly_table,
+                        &addresses_reassembly_table_functions);
 }
 
 /* Register the protocol with Wireshark */
